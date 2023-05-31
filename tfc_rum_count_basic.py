@@ -64,11 +64,14 @@ def call_tfapi_get_data(ws):
 org = os.environ.get("TF_ORG") or input("Enter your TFC organization: ")
 
 # Set API Token
-try: 
-    with open(os.path.expanduser("~/.terraform.d/credentials.tfrc.json")) as fp:
-        token = json.load(fp)['credentials']['app.terraform.io']['token']
-except FileNotFoundError:
-    token = os.environ.get("TF_TOKEN") or getpass.getpass("Enter a TFC Token: ")
+token = os.environ.get("TF_TOKEN")
+if token == None:
+    try: 
+        with open(os.path.expanduser("~/.terraform.d/credentials.tfrc.json")) as fp:
+            token = json.load(fp)['credentials']['app.terraform.io']['token']
+    except FileNotFoundError:
+        getpass.getpass("Enter a TFC Token: ")
+
 
 # set the base url
 base_url = f"https://app.terraform.io/api/v2"
