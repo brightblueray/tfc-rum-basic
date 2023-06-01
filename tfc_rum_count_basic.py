@@ -65,7 +65,7 @@ def setup_logging(log_level):
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
-        description="Script to output the workspace ID, name, and underlying version of TF."
+        description="Script to output basic Workspace Info (workspace ID, name, version, # resources) as well as an accurate RUM count."
     )
     parser.add_argument(
         "-l",

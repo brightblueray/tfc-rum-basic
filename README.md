@@ -2,7 +2,17 @@
 Basic RUM Count for TFC / TFE
 
 Usage:
-```python3 tfc_rum_count_basic.py```
+```
+% python3 tfc_rum_count_basic.py -h        
+usage: tfc_rum_count_basic.py [-h] [-l {DEBUG,INFO,WARNING,ERROR,CRITICAL}]
+
+Script to output basic Workspace Info (workspace ID, name, version, # resources) as well as an accurate RUM count.
+
+options:
+  -h, --help            show this help message and exit
+  -l {DEBUG,INFO,WARNING,ERROR,CRITICAL}, --log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}
+                        Set the logging level (default: INFO)
+```
 
 ## Optional Environment Variables:
 _TF_TOKEN_: valid TFC Token, precendence is:
