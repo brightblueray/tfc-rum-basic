@@ -30,7 +30,7 @@ def tfapi_get (url,headers,params=None):
                 break #Fatal
             elif response.status_code == 429:
                 # print("Rate Limit Error: 429 Too Many Requests, throttling requests")
-                logging.warning("Rate Limit Error: 429 Too Many Requests, throttling requests")
+                logging.error("Rate Limit Error: 429 Too Many Requests, throttling requests")
                 time.sleep(retry_delay)
             else:
                 logging.error(f"HTTP Error: {response.status_code}")
