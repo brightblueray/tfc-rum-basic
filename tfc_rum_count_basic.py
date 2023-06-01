@@ -1,5 +1,6 @@
 # Quick script that will output the workspace ID, name and underlying version of TF.
 # Imports
+import argparse
 import logging
 import requests
 import os
@@ -7,6 +8,8 @@ import json
 import getpass
 import time
 import concurrent.futures
+
+# logging.basicConfig(format='%(asctime)s %(message)s')
 
 ##
 ## tfapi_get: makes a single request and throttles in the case of a 429
@@ -20,21 +23,22 @@ def tfapi_get (url,headers,params=None):
             return response.json()
         except requests.exceptions.HTTPError as err:
             if response.status_code == 401:
-                print("Authorization Error: 401 Unauthorized")
+                logging.error("Authorization Error: 401 Unauthorized")
                 break #Fatal
             elif response.status_code == 404:
-                print("Forbidden Error: 404 Not Found")
+                logging.error("Forbidden Error: 404 Not Found")
                 break #Fatal
             elif response.status_code == 429:
-                print("Rate Limit Error: 429 Too Many Requests, throttling requests")
+                # print("Rate Limit Error: 429 Too Many Requests, throttling requests")
+                logging.warning("Rate Limit Error: 429 Too Many Requests, throttling requests")
                 time.sleep(retry_delay)
             else:
-                print(f"HTTP Error: {response.status_code}")
-                print(err)
+                logging.error(f"HTTP Error: {response.status_code}")
+                logging.error(err)
                 break #Fatal
         except requests.exceptions.RequestException as err:
-            print("Error occurred during the request.")
-            print(err)
+            logging.error("Error occurred during the request.")
+            logging.error(err)
             break #Fatal
         
 ##
@@ -55,10 +59,32 @@ def call_tfapi_get_data(ws):
     rs_url = f"{base_url}/workspaces/{ws['id']}/resources"
     return tfapi_get_data(rs_url, headers, params)
 
+def setup_logging(log_level):
+    log_format = "%(asctime)s %(message)s"
+    logging.basicConfig(format=log_format, level=log_level)
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(
+        description="Script to output the workspace ID, name, and underlying version of TF."
+    )
+    parser.add_argument(
+        "-l",
+        "--log-level",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        default="WARN",
+        help="Set the logging level (default: INFO)",
+    )
+    return parser.parse_args()
+
 
 ##
 ## MAIN
 ##
+
+# Parse command line arguments
+args = parse_arguments()
+setup_logging(args.log_level)
+
 
 #Get the TFC / TFE Organization and API
 org = os.environ.get("TF_ORG") or input("Enter your TFC organization: ")
@@ -105,9 +131,9 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=max_threads) as executor:
         try:
             result = future.result()
             resources += result
-            print(f"API Call successful for workspace {ws['id']}")
+            logging.info(f"API Call successful for workspace {ws['id']}")
         except Exception as e:
-            print(f"API Call failed for workspace {ws['id']}")
+            logging.error(f"API Call failed for workspace {ws['id']}")
 
 rum = 0
 null_rs = 0
