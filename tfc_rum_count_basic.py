@@ -30,7 +30,7 @@ def tfapi_get (url,headers,params=None):
                 break #Fatal
             elif response.status_code == 429:
                 # print("Rate Limit Error: 429 Too Many Requests, throttling requests")
-                logging.error("Rate Limit Error: 429 Too Many Requests, throttling requests")
+                logging.warning("Rate Limit Error: 429 Too Many Requests, throttling requests")
                 time.sleep(retry_delay)
             else:
                 logging.error(f"HTTP Error: {response.status_code}")
@@ -71,8 +71,8 @@ def parse_arguments():
         "-l",
         "--log-level",
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-        default="WARN",
-        help="Set the logging level (default: INFO)",
+        default="ERROR",
+        help="Set the logging level (default: ERROR)",
     )
     return parser.parse_args()
 
@@ -110,9 +110,9 @@ workspaces = tfapi_get_data(ws_url, headers, params)
 
 # Print Summary Table
 total = 0
-print (f"{'WS ID':24}{'Name':30}{'Version':10}{'Resources':10}")
+print (f"{'WS ID':24}{'Name':40}{'Version':10}{'Resources':10}")
 for ws in workspaces:
-    print (f"{ws['id']:24}{ws['attributes']['name']:30}{ws['attributes']['terraform-version']:10}{ws['attributes']['resource-count']:10}")
+    print (f"{ws['id']:24}{ws['attributes']['name']:40}{ws['attributes']['terraform-version']:10}{ws['attributes']['resource-count']:10}")
     total = total + ws['attributes']['resource-count']
 print (f"{'Total Resources: '}{total}\n\n")
 
@@ -140,7 +140,7 @@ null_rs = 0
 data_rs = 0
 
 for rs in resources:
-    if rs['attributes']['provider-type'] == "null_resource":
+    if rs['attributes']['provider-type'] == "null_resource" or rs['attributes']['provider-type'] == "terraform_data":
         null_rs += 1
     elif rs['attributes']['provider-type'].startswith("data"):
         data_rs += 1
@@ -149,5 +149,8 @@ for rs in resources:
 end_time = time.perf_counter()
 elapsed_time = end_time - start_time
 
-print (f"RUM: {rum}\nData Resources: {data_rs}\nNull Resources: {null_rs}")
+print (f"RUM Summary \n \
+       RUM: {rum}\n \
+       Data Resources: {data_rs}\n \
+       Null Resources: {null_rs}") 
 print(f"Elapsed time: {elapsed_time} seconds")
