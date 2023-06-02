@@ -13,6 +13,9 @@ options:
   -l {DEBUG,INFO,WARNING,ERROR,CRITICAL}, --log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}
                         Set the logging level (default: INFO)
 ```
+### Requires Requests Module
+```$ python -m pip install requests```
+
 
 ## Optional Environment Variables:
 _TF_TOKEN_: valid TFC Token, precendence is:
