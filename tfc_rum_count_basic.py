@@ -112,58 +112,101 @@ if token is None:
     except FileNotFoundError:
         token = getpass.getpass("Enter a TFC Token: ")
 
-#Get the TFC / TFE Organization and API
-org = os.environ.get("TF_ORG") or input("Enter your TFC organization: ")
-
-# Get workspaces
-ws_url = f"{base_url}/organizations/{org}/workspaces"
+# Set Headers & Params
 headers = {"Authorization": "Bearer " + token}
 params = {'page[size]': '100'}
-workspaces = tfapi_get_data(ws_url, headers, params)
 
-# Print Summary Table
-total = 0
-print (f"{'WS ID':24}{'Name':40}{'Version':10}{'Resources':10}")
-for ws in workspaces:
-    print (f"{ws['id']:24}{ws['attributes']['name']:40}{ws['attributes']['terraform-version']:10}{ws['attributes']['resource-count']:10}")
-    total = total + ws['attributes']['resource-count']
-print (f"{'Total Resources: '}{total}\n\n")
+# Get Organizations
+orgs_url = f"{base_url}/organizations"
+org_response = requests.get(orgs_url,headers=headers, params=params)
+organizations = tfapi_get_data(orgs_url, headers, params)
 
-# Get Resources
-start_time = time.perf_counter()
-max_threads = 100
+summary = {}
 
-# Create Thread Pool Executor
-with concurrent.futures.ThreadPoolExecutor(max_workers=max_threads) as executor:
-    # Submit API Call to executor
-    futures = [executor.submit(call_tfapi_get_data, ws) for ws in workspaces]
-    
-    resources = []
-    
-    for future, ws in zip(concurrent.futures.as_completed(futures), workspaces):
-        try:
-            result = future.result()
-            resources += result
-            logging.info(f"API Call successful for workspace {ws['id']}")
-        except Exception as e:
-            logging.error(f"API Call failed for workspace {ws['id']}")
+for o in organizations:
+    org = o['attributes']['name']
+    print(f"\nProcessing organization: {org}")
 
-rum = 0
-null_rs = 0
-data_rs = 0
+    # Get workspaces
+    ws_url = f"{base_url}/organizations/{org}/workspaces"
+    workspaces = tfapi_get_data(ws_url, headers, params)
 
-for rs in resources:
-    if rs['attributes']['provider-type'] == "null_resource" or rs['attributes']['provider-type'] == "terraform_data":
-        null_rs += 1
-    elif rs['attributes']['provider-type'].startswith("data"):
-        data_rs += 1
-    else:
-        rum += 1
-end_time = time.perf_counter()
-elapsed_time = end_time - start_time
+    # Print WS Detail Table
+    total = 0
+    print (f"{'WS ID':24}{'Name':40}{'Version':10}{'Resources':10}")
+    for ws in workspaces:
+        print (f"{ws['id']:24}{ws['attributes']['name']:40}{ws['attributes']['terraform-version']:10}{ws['attributes']['resource-count']:10}")
+        total = total + ws['attributes']['resource-count']
+    print (f"{'Total Resources: '}{total}\n\n")
 
-print (f"RUM Summary \n \
-       RUM: {rum}\n \
-       Data Resources: {data_rs}\n \
-       Null Resources: {null_rs}") 
-print(f"Elapsed time: {elapsed_time} seconds")
+    # Get Resources
+    start_time = time.perf_counter()
+    max_threads = 100
+
+    # Create Thread Pool Executor
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_threads) as executor:
+        # Submit API Call to executor
+        futures = [executor.submit(call_tfapi_get_data, ws) for ws in workspaces]
+        
+        resources = []
+        
+        for future, ws in zip(concurrent.futures.as_completed(futures), workspaces):
+            try:
+                result = future.result()
+                resources += result
+                logging.info(f"API Call successful for workspace {ws['id']}")
+            except Exception as e:
+                logging.error(f"API Call failed for workspace {ws['id']}")
+
+    rum = 0
+    null_rs = 0
+    data_rs = 0
+
+    for rs in resources:
+        if rs['attributes']['provider-type'] == "null_resource" or rs['attributes']['provider-type'] == "terraform_data":
+            null_rs += 1
+        elif rs['attributes']['provider-type'].startswith("data"):
+            data_rs += 1
+        else:
+            rum += 1
+    end_time = time.perf_counter()
+    elapsed_time = end_time - start_time
+
+    # Create the organization dictionary with the metrics
+    org_summary = {
+        'workspaces': len(workspaces),
+        'RUM': rum,
+        'data_resources': data_rs,
+        'null_resources': null_rs,
+        'elapsed_time': elapsed_time    
+    }
+
+    # Add the organization summary to the main summary dictionary
+    summary[org] = org_summary
+
+# Print the header row
+header_row = f"{'Organization':<30}{'Workspaces':<12}{'RUM':<8}{'Data Resources':<16}{'Null Resources':<16}{'Elapsed Time':<15}"
+print(header_row)
+
+# Print data for each organization
+for org, org_summary in summary.items():
+    workspace_count = str(org_summary['workspaces'])
+    rum_count = str(org_summary['RUM'])
+    data_resources_count = str(org_summary['data_resources'])
+    null_resources_count = str(org_summary['null_resources'])
+    elapsed_time = f"{org_summary['elapsed_time']:.3f}"
+
+    org_row = f"{org:<30}{workspace_count:12}{rum_count:8}{data_resources_count:16}{null_resources_count:16}{elapsed_time:15}"
+    print(org_row)
+
+# Print the totals row
+totals = [
+    'Total',
+    sum(org_summary['workspaces'] for org_summary in summary.values()),
+    sum(org_summary['RUM'] for org_summary in summary.values()),
+    sum(org_summary['data_resources'] for org_summary in summary.values()),
+    sum(org_summary['null_resources'] for org_summary in summary.values()),
+    sum(org_summary['elapsed_time'] for org_summary in summary.values())
+]
+totals_row = f"{'Total':<30}{totals[1]:<12}{totals[2]:<8}{totals[3]:<16}{totals[4]:<16}{totals[5]:.3f}"
+print(totals_row)
