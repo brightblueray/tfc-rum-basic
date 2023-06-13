@@ -94,18 +94,23 @@ args = parse_arguments()
 setup_logging(args.log_level)
 
 # set the base url
-base_url = f"{args.addr}/api/v2"
+base_url = os.environ.get("TF_ADDR") or f"{args.addr}/api/v2"  #ENV Variable overrides commandline
 logging.info(f"Using Base URL: {base_url}")
 server = urlparse(base_url).netloc  # Need the server to parse the token from helper file
 
 # Set API Token
 token = os.environ.get("TF_TOKEN")
-if token == None:
+if token is None:
     try: 
         with open(os.path.expanduser("~/.terraform.d/credentials.tfrc.json")) as fp:
-            token = json.load(fp)['credentials'][server]['token']
+            credentials = json.load(fp)['credentials']
+            if server in credentials:
+                token = credentials[server]['token']
+            else:
+                default_server = "app.terraform.io"  # Default server value
+                token = credentials.get(default_server, {}).get('token')
     except FileNotFoundError:
-        getpass.getpass("Enter a TFC Token: ")
+        token = getpass.getpass("Enter a TFC Token: ")
 
 #Get the TFC / TFE Organization and API
 org = os.environ.get("TF_ORG") or input("Enter your TFC organization: ")
