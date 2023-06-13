@@ -8,6 +8,7 @@ import json
 import getpass
 import time
 import concurrent.futures
+from urllib.parse import urlparse
 
 # logging.basicConfig(format='%(asctime)s %(message)s')
 
@@ -74,6 +75,13 @@ def parse_arguments():
         default="ERROR",
         help="Set the logging level (default: ERROR)",
     )
+    parser.add_argument(
+        "-a",
+        "--addr",
+        default="https://app.terraform.io",
+        help="URL for your TFE Server (default: 'https://app.terraform.io')",
+    )
+
     return parser.parse_args()
 
 
@@ -85,22 +93,22 @@ def parse_arguments():
 args = parse_arguments()
 setup_logging(args.log_level)
 
-
-#Get the TFC / TFE Organization and API
-org = os.environ.get("TF_ORG") or input("Enter your TFC organization: ")
+# set the base url
+base_url = f"{args.addr}/api/v2"
+logging.info(f"Using Base URL: {base_url}")
+server = urlparse(base_url).netloc  # Need the server to parse the token from helper file
 
 # Set API Token
 token = os.environ.get("TF_TOKEN")
 if token == None:
     try: 
         with open(os.path.expanduser("~/.terraform.d/credentials.tfrc.json")) as fp:
-            token = json.load(fp)['credentials']['app.terraform.io']['token']
+            token = json.load(fp)['credentials'][server]['token']
     except FileNotFoundError:
         getpass.getpass("Enter a TFC Token: ")
 
-
-# set the base url
-base_url = f"https://app.terraform.io/api/v2"
+#Get the TFC / TFE Organization and API
+org = os.environ.get("TF_ORG") or input("Enter your TFC organization: ")
 
 # Get workspaces
 ws_url = f"{base_url}/organizations/{org}/workspaces"

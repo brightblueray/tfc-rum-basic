@@ -1,24 +1,27 @@
 # tfc-rum-basic
 Basic RUM Count for TFC / TFE
 
-Usage:
+
 ```
-% python3 tfc_rum_count_basic.py -h        
-usage: tfc_rum_count_basic.py [-h] [-l {DEBUG,INFO,WARNING,ERROR,CRITICAL}]
+usage: tfc_rum_count_basic.py [-h] [-l {DEBUG,INFO,WARNING,ERROR,CRITICAL}] [-a ADDR]
 
 Script to output basic Workspace Info (workspace ID, name, version, # resources) as well as an accurate RUM count.
 
 options:
   -h, --help            show this help message and exit
   -l {DEBUG,INFO,WARNING,ERROR,CRITICAL}, --log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}
-                        Set the logging level (default: INFO)
-```
+                        Set the logging level (default: ERROR)
+  -a ADDR, --addr ADDR  URL for your TFE Server (default: 'https://app.terraform.io')
+  ```
 ### Requires Requests Module
 ```$ python -m pip install requests```
 
 
 ## Optional Environment Variables:
-_TF_TOKEN_: valid TFC Token, precendence is:
+**TF_ADDR**: Address of TFE Server.  If not set, assumes TFC ("https://app.terraform.io"), DO NOT add api/v2 path to the address.
+
+
+**TF_TOKEN**: valid TFC Token, precendence is:
 1. TF_TOKEN
 2. ~/.terraform.d/credentials.tfrc.json 
 3. User prompt
