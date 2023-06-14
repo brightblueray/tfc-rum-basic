@@ -1,11 +1,14 @@
 # tfc-rum-basic
-Basic RUM Count for TFC / TFE
+Basic RUM Count for TFC / TFE.  This version assumes that workspaces is TF Version 0.14 or above.
 
+### Caution: 
+This version assumes that workspaces is TF Version 0.14 or above.  A fix to address this will be coming shortly
 
+## Usage
 ```
-usage: tfc_rum_count_basic.py [-h] [-l {DEBUG,INFO,WARNING,ERROR,CRITICAL}] [-a ADDR]
+python3 tfc_rum_count_basic.py [-h] [-l {DEBUG,INFO,WARNING,ERROR,CRITICAL}] [-a ADDR]
 
-Script to output basic Workspace Info (workspace ID, name, version, # resources) as well as an accurate RUM count.
+Script to output basic Workspace Info (workspace ID, name, version, # resources) as well as an approximate RUM count.
 
 options:
   -h, --help            show this help message and exit
@@ -15,6 +18,21 @@ options:
   ```
 ### Requires Requests Module
 ```$ python -m pip install requests```
+
+## Links
+
+### List Workspaces
+https://developer.hashicorp.com/terraform/cloud-docs/api-docs/workspaces#list-workspaces
+```GET /organizations/:organization_name/workspaces```
+
+### Get Resources
+https://developer.hashicorp.com/terraform/cloud-docs/api-docs/workspace-resources#list-workspace-resources
+```GET /workspaces/:workspace_id/resources```
+
+### Get Tags
+https://developer.hashicorp.com/terraform/cloud-docs/api-docs/workspaces#get-tags
+```GET /workspaces/:workspace_id/relationships/tags```
+
 
 
 ## Optional Environment Variables:
