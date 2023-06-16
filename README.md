@@ -6,15 +6,16 @@ This version assumes that workspaces is TF Version 0.14 or above.  A fix to addr
 
 ## Usage
 ```
-python3 tfc_rum_count_basic.py [-h] [-l {DEBUG,INFO,WARNING,ERROR,CRITICAL}] [-a ADDR]
+python3 tfc_rum_count_basic.py [-h] [-l {DEBUG,INFO,WARNING,ERROR,CRITICAL}] [-a ADDR] [-v]
 
-Script to output basic Workspace Info (workspace ID, name, version, # resources) as well as an approximate RUM count.
+Script to output basic Workspace Info (workspace ID, name, version, # resources) as well as an accurate RUM count.
 
 options:
   -h, --help            show this help message and exit
   -l {DEBUG,INFO,WARNING,ERROR,CRITICAL}, --log-level {DEBUG,INFO,WARNING,ERROR,CRITICAL}
                         Set the logging level (default: ERROR)
   -a ADDR, --addr ADDR  URL for your TFE Server (default: 'https://app.terraform.io')
+  -v, --verbose         Verbose will print details for every organization, otherwise only a summary table will appear.
   ```
 ### Requires Requests Module
 ```$ python -m pip install requests```

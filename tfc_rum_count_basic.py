@@ -10,10 +10,10 @@ import time
 import concurrent.futures
 from urllib.parse import urlparse
 
-# logging.basicConfig(format='%(asctime)s %(message)s')
+
 
 ##
-## tfapi_get: makes a single request and throttles in the case of a 429
+## tfapi_get: makes a single request and throttles thread in the case of a 429
 ##
 def tfapi_get (url,headers,params=None):
     retry_delay = 0.2 # 200 ms delay
@@ -25,7 +25,7 @@ def tfapi_get (url,headers,params=None):
         except requests.exceptions.HTTPError as err:
             if response.status_code == 401:
                 logging.error("Authorization Error: 401 Unauthorized")
-                break #Fatal
+                # break #Actually not fatal ;-)
             elif response.status_code == 404:
                 logging.error("Forbidden Error: 404 Not Found")
                 break #Fatal
@@ -41,7 +41,9 @@ def tfapi_get (url,headers,params=None):
             logging.error("Error occurred during the request.")
             logging.error(err)
             break #Fatal
+ 
         
+
 ##
 ## tfapi_get_data: iterates through all the pages of data before returning
 ##
@@ -53,6 +55,8 @@ def tfapi_get_data (url, headers, params):
         data += result['data']
     return data
 
+
+
 ##
 ## Function to call tfapi_get_data
 ##
@@ -60,10 +64,20 @@ def call_tfapi_get_data(ws):
     rs_url = f"{base_url}/workspaces/{ws['id']}/resources"
     return tfapi_get_data(rs_url, headers, params)
 
+
+
+##
+## Function Set-up Logging
+##
 def setup_logging(log_level):
-    log_format = "%(asctime)s %(message)s"
+    log_format = "%(levelname)s:%(asctime)s %(message)s"
     logging.basicConfig(format=log_format, level=log_level)
 
+
+
+##
+## Function Parse command line args
+##
 def parse_arguments():
     parser = argparse.ArgumentParser(
         description="Script to output basic Workspace Info (workspace ID, name, version, # resources) as well as an accurate RUM count."
@@ -81,16 +95,23 @@ def parse_arguments():
         default="https://app.terraform.io",
         help="URL for your TFE Server (default: 'https://app.terraform.io')",
     )
+    parser.add_argument(
+        '-v', 
+        '--verbose',
+        help="Verbose will print details for every organization, otherwise only a summary table will appear.",
+        action='store_true')
 
     return parser.parse_args()
 
 
-##
+
+##########################################
 ## MAIN
-##
+##########################################
 
 # Parse command line arguments
 args = parse_arguments()
+verbose = args.verbose
 setup_logging(args.log_level)
 
 # set the base url
@@ -99,7 +120,7 @@ logging.info(f"Using Base URL: {base_url}")
 server = urlparse(base_url).netloc  # Need the server to parse the token from helper file
 
 # Set API Token
-token = os.environ.get("TF_TOKEN")
+token = os.environ.get("TF_TOKEN")     #ENV Variable first
 if token is None:
     try: 
         with open(os.path.expanduser("~/.terraform.d/credentials.tfrc.json")) as fp:
@@ -109,8 +130,12 @@ if token is None:
             else:
                 default_server = "app.terraform.io"  # Default server value
                 token = credentials.get(default_server, {}).get('token')
+            logging.info(f"Using Token from ~/.terraform.d/credentials.tfrc.json")
     except FileNotFoundError:
         token = getpass.getpass("Enter a TFC Token: ")
+        logging.info(f"Using Token from user prompt")
+else:
+    logging.info(f"Using Token from $TF_TOKEN")
 
 # Set Headers & Params
 headers = {"Authorization": "Bearer " + token}
@@ -122,6 +147,7 @@ org_response = requests.get(orgs_url,headers=headers, params=params)
 organizations = tfapi_get_data(orgs_url, headers, params)
 
 summary = {}
+est_total = 0
 
 for o in organizations:
     org = o['attributes']['name']
@@ -133,11 +159,12 @@ for o in organizations:
 
     # Print WS Detail Table
     total = 0
-    print (f"{'WS ID':24}{'Name':40}{'Version':10}{'Resources':10}")
+    if verbose: print (f"{'WS ID':24}{'Name':40}{'Version':10}{'Resources':10}")
     for ws in workspaces:
-        print (f"{ws['id']:24}{ws['attributes']['name']:40}{ws['attributes']['terraform-version']:10}{ws['attributes']['resource-count']:10}")
+        if verbose: print (f"{ws['id']:24}{ws['attributes']['name']:40}{ws['attributes']['terraform-version']:10}{ws['attributes']['resource-count']:10}")
         total = total + ws['attributes']['resource-count']
     print (f"{'Total Resources: '}{total}\n\n")
+    est_total += total
 
     # Get Resources
     start_time = time.perf_counter()
@@ -183,6 +210,10 @@ for o in organizations:
 
     # Add the organization summary to the main summary dictionary
     summary[org] = org_summary
+
+
+#Print Estimated Total
+print(f"Estimated Total: {est_total:,}\n")
 
 # Print the header row
 header_row = f"{'Organization':<30}{'Workspaces':<12}{'RUM':<8}{'Data Resources':<16}{'Null Resources':<16}{'Elapsed Time':<15}"
