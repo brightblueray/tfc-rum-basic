@@ -1,13 +1,14 @@
 # Quick script that will output the workspace ID, name and underlying version of TF.
 # Imports
 import argparse
-import logging
-import requests
-import os
-import json
-import getpass
-import time
 import concurrent.futures
+import datetime
+import getpass
+import json
+import logging
+import os
+import requests
+import time
 from urllib.parse import urlparse
 
 
@@ -159,9 +160,9 @@ for o in organizations:
 
     # Print WS Detail Table
     total = 0
-    if verbose: print (f"{'WS ID':24}{'Name':40}{'Version':10}{'Resources':10}")
+    if verbose: print (f"{'WS ID':24}{'Name':40}{'Resources':10}{'Version':9}{'Last-Updated':13}")
     for ws in workspaces:
-        if verbose: print (f"{ws['id']:24}{ws['attributes']['name']:40}{ws['attributes']['terraform-version']:10}{ws['attributes']['resource-count']:10}")
+        if verbose: print(f"{ws['id']:24}{ws['attributes']['name']:40}{ws['attributes']['resource-count']:<10}{ws['attributes']['terraform-version']:9}{datetime.datetime.strptime(ws['attributes']['latest-change-at'], '%Y-%m-%dT%H:%M:%S.%fZ').strftime('%Y-%m-%d'):13}")
         total = total + ws['attributes']['resource-count']
     print (f"{'Total Resources: '}{total}\n\n")
     est_total += total
