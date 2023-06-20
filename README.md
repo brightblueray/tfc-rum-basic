@@ -1,11 +1,16 @@
 # tfc-rum-basic
-Basic RUM Count for TFC / TFE.  This version assumes that workspaces is TF Version 0.14 or above.
 
-### Caution:
-This version assumes that workspaces is TF Version 0.14 or above.  A fix to address this will be coming shortly
+Basic RUM Count for TFC / TFE.
+This version assumes that workspaces is TF Version 0.14 or above.
+
+## Caution
+
+This version assumes that workspaces is TF Version 0.14 or above.
+A fix to address this will be coming shortly
 
 ## Usage
-```
+
+```shell-session
 python3 tfc_rum_count_basic.py [-h] [-l {DEBUG,INFO,WARNING,ERROR,CRITICAL}] [-a ADDR] [-v]
 
 Script to output basic Workspace Info (workspace ID, name, version, # resources) as well as an accurate RUM count.
@@ -16,7 +21,8 @@ options:
                         Set the logging level (default: ERROR)
   -a ADDR, --addr ADDR  URL for your TFE Server (default: 'https://app.terraform.io')
   -v, --verbose         Verbose will print details for every organization, otherwise only a summary table will appear.
-  ```
+```
+
 ### Requires Requests Module
 
 ```shell-session
@@ -26,24 +32,28 @@ pip install -r requirements.txt
 ## Links
 
 ### List Workspaces
-https://developer.hashicorp.com/terraform/cloud-docs/api-docs/workspaces#list-workspaces
+
+[docs](https://developer.hashicorp.com/terraform/cloud-docs/api-docs/workspaces#list-workspaces)
 ```GET /organizations/:organization_name/workspaces```
 
 ### Get Resources
-https://developer.hashicorp.com/terraform/cloud-docs/api-docs/workspace-resources#list-workspace-resources
+
+[docs](https://developer.hashicorp.com/terraform/cloud-docs/api-docs/workspace-resources#list-workspace-resources)
 ```GET /workspaces/:workspace_id/resources```
 
 ### Get Tags
-https://developer.hashicorp.com/terraform/cloud-docs/api-docs/workspaces#get-tags
+
+[docs](https://developer.hashicorp.com/terraform/cloud-docs/api-docs/workspaces#get-tags)
 ```GET /workspaces/:workspace_id/relationships/tags```
 
+## Optional Environment Variables
 
-
-## Optional Environment Variables:
-**TF_ADDR**: Address of TFE Server.  If not set, assumes TFC ("https://app.terraform.io"), DO NOT add api/v2 path to the address.
-
+**TF_ADDR**: Address of TFE Server.
+If not set, assumes TFC "<https://app.terraform.io>",
+DO NOT add api/v2 path to the address.
 
 **TF_TOKEN**: valid TFC Token, precendence is:
+
 1. TF_TOKEN
 2. ~/.terraform.d/credentials.tfrc.json
 3. User prompt
@@ -51,7 +61,8 @@ https://developer.hashicorp.com/terraform/cloud-docs/api-docs/workspaces#get-tag
 _TF_ORG_: Organization Name
 
 ## Sample Output
-```
+
+```shell-session
 rryjewski@RKR-MBP14 tfc-rum-basic % python3 tfc_rum_count_basic.py
 
 Processing organization: bm_mi_lab
