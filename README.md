@@ -1,7 +1,7 @@
 # tfc-rum-basic
 Basic RUM Count for TFC / TFE.  This version assumes that workspaces is TF Version 0.14 or above.
 
-### Caution: 
+### Caution:
 This version assumes that workspaces is TF Version 0.14 or above.  A fix to address this will be coming shortly
 
 ## Usage
@@ -18,7 +18,10 @@ options:
   -v, --verbose         Verbose will print details for every organization, otherwise only a summary table will appear.
   ```
 ### Requires Requests Module
-```$ python -m pip install requests```
+
+```shell-session
+pip install -r requirements.txt
+```
 
 ## Links
 
@@ -42,7 +45,7 @@ https://developer.hashicorp.com/terraform/cloud-docs/api-docs/workspaces#get-tag
 
 **TF_TOKEN**: valid TFC Token, precendence is:
 1. TF_TOKEN
-2. ~/.terraform.d/credentials.tfrc.json 
+2. ~/.terraform.d/credentials.tfrc.json
 3. User prompt
 
 _TF_ORG_: Organization Name
@@ -52,7 +55,7 @@ _TF_ORG_: Organization Name
 rryjewski@RKR-MBP14 tfc-rum-basic % python3 tfc_rum_count_basic.py
 
 Processing organization: bm_mi_lab
-WS ID                   Name                                    Version   Resources 
+WS ID                   Name                                    Version   Resources
 ws-ygi5Z6ZDyFn67Cj7     demo_aws_bastion                        1.3.2              6
 ws-UZPFPWiULZahSwn7     demo-azure-drift                        1.4.6              9
 ws-MhvPWvMV8FEaMNKc     demo_azure_keyvault                     1.3.1              6
@@ -66,7 +69,7 @@ Total Resources: 27
 
 
 Processing organization: brightblueray
-WS ID                   Name                                    Version   Resources 
+WS ID                   Name                                    Version   Resources
 ws-4E1VwfEe9zxtuYun     demo-pmr-drift-v2                       1.2.9              5
 ws-MKNReg5ycUEKYSM3     04-azure-admin                          latest             4
 ws-j38PT3bajqjpekVv     vault-ent-e2e                           1.4.2              0
@@ -109,13 +112,13 @@ Total Resources: 167
 
 
 Processing organization: glma
-WS ID                   Name                                    Version   Resources 
+WS ID                   Name                                    Version   Resources
 Total Resources: 0
 
 
 
 Processing organization: hc-solutions-engineering
-WS ID                   Name                                    Version   Resources 
+WS ID                   Name                                    Version   Resources
 ws-G6AFRRx3DzckEjqf     se-vmware-interim                       0.14.6            50
 ws-upASPqucN3xM22bJ     tf-demo-another-ws                      0.12.21            0
 ws-R2GwqnE2remHMqow     terraform-ado-demo                      0.12.24            0
@@ -132,7 +135,7 @@ Total Resources: 1308
 
 
 Processing organization: rkr-admin
-WS ID                   Name                                    Version   Resources 
+WS ID                   Name                                    Version   Resources
 ws-A4fG8Ge2sxqTN3Sm     vault-hcp-prod                          1.3.2              2
 ws-o4gEdL1dwhq49td1     tfc-workspaces-rkr_admin                latest             3
 ws-tpjUiD5n5NppYFJj     vault-hcp-prod-config                   1.3.2              0
@@ -141,16 +144,16 @@ Total Resources: 5
 
 
 Processing organization: rryjewski-free
-WS ID                   Name                                    Version   Resources 
+WS ID                   Name                                    Version   Resources
 Total Resources: 0
 
 
-Organization                  Workspaces  RUM     Data Resources  Null Resources  Elapsed Time   
-bm_mi_lab                     8           19      8               0               1.836          
-brightblueray                 37          166     13              1               1.154          
-glma                          0           0       0               0               0.000          
-hc-solutions-engineering      11          40      5               5               0.503          
-rkr-admin                     3           4       1               0               0.305          
-rryjewski-free                0           0       0               0               0.000          
+Organization                  Workspaces  RUM     Data Resources  Null Resources  Elapsed Time
+bm_mi_lab                     8           19      8               0               1.836
+brightblueray                 37          166     13              1               1.154
+glma                          0           0       0               0               0.000
+hc-solutions-engineering      11          40      5               5               0.503
+rkr-admin                     3           4       1               0               0.305
+rryjewski-free                0           0       0               0               0.000
 Total                         59          229     27              6               3.798
 ```
