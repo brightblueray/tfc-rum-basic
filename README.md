@@ -50,7 +50,7 @@ pip install -r requirements.txt
 
 **TF_ADDR**: Address of TFE Server.
 If not set, assumes TFC "<https://app.terraform.io>",
-DO NOT add api/v2 path to the address.
+ADD api/v2 path to the address.
 
 **TF_TOKEN**: valid TFC Token, precendence is:
 
