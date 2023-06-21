@@ -21,14 +21,16 @@ def tfapi_get (url,headers,params=None):
     while True:
         try:
             response = requests.get(url,headers=headers, params=params)
+            # response = requests.get(url,headers=headers)
+            logging.info(f"Trying: {response.url}")
             response.raise_for_status()
             return response.json()
         except requests.exceptions.HTTPError as err:
             if response.status_code == 401:
-                logging.error("Authorization Error: 401 Unauthorized")
+                logging.error("Authorization Error: 401 Unauthorized: {response.url}")
                 # break #Actually not fatal ;-)
             elif response.status_code == 404:
-                logging.error("Forbidden Error: 404 Not Found")
+                logging.error(f"Forbidden Error: 404 Not Found: {response.url}")
                 break #Fatal
             elif response.status_code == 429:
                 # print("Rate Limit Error: 429 Too Many Requests, throttling requests")
@@ -50,7 +52,8 @@ def tfapi_get (url,headers,params=None):
 ##
 def tfapi_get_data (url, headers, params):
     result = tfapi_get(url, headers, params)
-    data = result['data']
+    data = []
+    data += result['data']
     while (result['links']['next']):
         result = tfapi_get(result['links']['next'],headers)
         data += result['data']
@@ -59,11 +62,37 @@ def tfapi_get_data (url, headers, params):
 
 
 ##
-## Function to call tfapi_get_data
+## tfapi_get_state: 
 ##
-def call_tfapi_get_data(ws):
-    rs_url = f"{base_url}/workspaces/{ws['id']}/resources"
-    return tfapi_get_data(rs_url, headers, params)
+def tfapi_get_state (url, headers, params):
+    resources = []
+    result = tfapi_get(url, headers, params)
+    data = result['data']
+    resources += data['attributes']['resources']
+    return resources
+
+
+
+##
+## Function Get_Resources
+##
+def get_resources(ws):
+    rs_url = f"{base_url}{api_ver}/workspaces/{ws['id']}/resources"
+    state_url = f"{base_url}{api_ver}/workspaces/{ws['id']}/current-state-version"
+
+    # Is the workspace stale?
+    ws_date = datetime.datetime.strptime(ws['attributes']['updated-at'], '%Y-%m-%dT%H:%M:%S.%fZ')
+    if ws_date > cutoff_date:
+        logging.info("Fresh Workspace, getting resources for: {ws['id']}")
+        return tfapi_get_data(rs_url, headers, params)
+    else:
+        logging.info (f"Stale Workspace: {ws['id']}  Last Updated: {ws_date.strftime('%Y-%m-%d')}")
+        return tfapi_get_state(state_url, headers, params)
+
+
+    
+    
+
 
 
 
@@ -116,7 +145,7 @@ verbose = args.verbose
 setup_logging(args.log_level)
 
 # set the base url
-base_url = os.environ.get("TF_ADDR") or f"{args.addr}/api/v2"  #ENV Variable overrides commandline
+base_url = os.environ.get("TF_ADDR") or f"{args.addr}"  #ENV Variable overrides commandline
 logging.info(f"Using Base URL: {base_url}")
 server = urlparse(base_url).netloc  # Need the server to parse the token from helper file
 
@@ -141,21 +170,23 @@ else:
 # Set Headers & Params
 headers = {"Authorization": "Bearer " + token}
 params = {'page[size]': '100'}
+api_ver = "/api/v2"
 
 # Get Organizations
-orgs_url = f"{base_url}/organizations"
+orgs_url = f"{base_url}{api_ver}/organizations"
 org_response = requests.get(orgs_url,headers=headers, params=params)
 organizations = tfapi_get_data(orgs_url, headers, params)
 
 summary = {}
 est_total = 0
+cutoff_date = datetime.datetime(2021, 6, 29)
 
 for o in organizations:
     org = o['attributes']['name']
     print(f"\nProcessing organization: {org}")
 
     # Get workspaces
-    ws_url = f"{base_url}/organizations/{org}/workspaces"
+    ws_url = f"{base_url}{api_ver}/organizations/{org}/workspaces"
     workspaces = tfapi_get_data(ws_url, headers, params)
 
     # Print WS Detail Table
@@ -174,7 +205,7 @@ for o in organizations:
     # Create Thread Pool Executor
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_threads) as executor:
         # Submit API Call to executor
-        futures = [executor.submit(call_tfapi_get_data, ws) for ws in workspaces]
+        futures = [executor.submit(get_resources, ws) for ws in workspaces]
         
         resources = []
         
@@ -184,6 +215,7 @@ for o in organizations:
                 resources += result
                 logging.info(f"API Call successful for workspace {ws['id']}")
             except Exception as e:
+                print(e)
                 logging.error(f"API Call failed for workspace {ws['id']}")
 
     rum = 0
@@ -191,12 +223,19 @@ for o in organizations:
     data_rs = 0
 
     for rs in resources:
-        if rs['attributes']['provider-type'] == "null_resource" or rs['attributes']['provider-type'] == "terraform_data":
-            null_rs += 1
-        elif rs['attributes']['provider-type'].startswith("data"):
-            data_rs += 1
+        if rs['type'] == 'resources':
+            if rs['attributes']['provider-type'] == "null_resource" or rs['attributes']['provider-type'] == "terraform_data":
+                null_rs += 1
+            elif rs['attributes']['provider-type'].startswith("data"):
+                data_rs += 1
+            else:
+                rum += 1
+        elif rs['type'] == 'null_resource' or rs['type'] == "terraform_data":
+            null_rs += rs['count']
+        elif rs['type'].startswith("data"):
+            data_rs += rs['count']
         else:
-            rum += 1
+            rum += rs['count']
     end_time = time.perf_counter()
     elapsed_time = end_time - start_time
 
