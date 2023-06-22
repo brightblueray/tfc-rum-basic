@@ -6,6 +6,7 @@ import getpass
 import json
 import logging
 import os
+import pprint
 import requests
 import time
 from urllib.parse import urlparse
@@ -150,25 +151,8 @@ def parse_arguments():
     )
     return parser.parse_args()
 
-# def process_path(path):
-#     folder_path = path
-#     json
-
-# # Iterate over the files in the folder
-# for filename in os.listdir(folder_path):
-#     if filename.endswith(".json"):
-#         file_path = os.path.join(folder_path, filename)
-#         with open(file_path) as file:
-#             json_data = json.load(file)
-
-#         # Process the JSON data
-#         # ... Your processing code here ...
-#         print(f"Processed file: {filename}")
-
-
 
 def print_summary(rum_sum):
-    print("Header")
 
     # Initialize variables for subtotal and grand total
     org_subtotal = {'rum': 0, 'null_rs': 0, 'data_rs': 0, 'total': 0}
@@ -216,6 +200,59 @@ def print_summary(rum_sum):
 
 def process_oss(args):
     logging.info(f"Processing OSS")
+    rum_sum = []  # rum_sum a list of organization results
+    org_response = []
+
+    if args.path is not None:
+        org_response.append({'id': path})
+
+    # pprint.pprint(org_response)
+    workspaces = []  
+
+    # Convert each state file into a json object
+    for filename in os.listdir(path):
+        print(f"Processing file: {path}/{filename}")
+        if filename.endswith('.tfstate'):
+            file_path = os.path.join(path, filename)
+            with open(file_path) as file:
+                json_data = json.load(file)
+                json_data['id'] = filename
+                workspaces.append(json_data)
+
+    # Iterate over each org
+    for o in org_response:
+        # logging.info(f"Processing Org: {o['id']}")
+        print(f"Processing Org: {o['id']}")
+        org_sum = {}  # Initialize org summary
+        org_sum['id'] = o['id'] # Set the id to org_id being processed
+        org_sum['workspaces'] = [] # Initialize the list of workspaces for the org
+
+        for ws in workspaces:
+            # logging.info(f"Processing ws: {ws['id']}")
+            print(f"Processing ws: {ws['id']}")
+            ws_sum = {}
+            ws_sum['id'] = 'n/a'
+            ws_sum['name'] = ws['id']
+            ws_sum['resource-count'] = 0
+            ws_sum['terraform-version'] = ws['terraform_version']
+            ws_sum['last-updated'] = datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+            resources = ws['resources']
+            rum = 0
+            null_rs = 0
+            data_rs = 0
+            for rs in resources:
+                if rs['type'] == 'null_resource':
+                    null_rs += 1
+                elif rs['type'].startswith("data") or rs['type'] == "terraform_data":
+                    data_rs += 1
+                else:
+                    rum += 1
+            ws_sum['resources'] = {'rum': rum , 'null_rs':null_rs, 'data_rs': data_rs, 'total':rum+null_rs+data_rs}
+            org_sum['workspaces'].append(ws_sum)
+
+        rum_sum.append(org_sum)
+    return rum_sum
+
 
 def process_enterprise(args):
     logging.info(f"Processing Enterprise")
@@ -280,7 +317,7 @@ def process_enterprise(args):
             org_sum['workspaces'].append(ws_sum)
             
         rum_sum.append(org_sum)
-    print_summary(rum_sum)
+    return rum_sum
 
 
 ##########################################
@@ -294,7 +331,8 @@ setup_logging(args.log_level)
 
 path = args.path
 if path != None:
-    process_oss(args)
+    rum_sum = process_oss(args)
 else:
-    process_enterprise(args)
+    rum_sum = process_enterprise(args)
 
+print_summary(rum_sum)

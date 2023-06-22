@@ -1,12 +1,12 @@
 # tfc-rum-basic
-Basic RUM Count for TFC / TFE.  This version assumes that workspaces is TF Version 0.14 or above.
+Basic RUM Count for TFC / TFE.  This version fixes issue where resources API has not been populated, which impacts any TF workspace not updated since 7/1/2021.
 
 ### Caution: 
-This version assumes that workspaces is TF Version 0.14 or above.  A fix to address this will be coming shortly
+This version has been tested against a limited sample size.  YMMV
 
 ## Usage
 ```
-python3 tfc_rum_count.py [-h] [-l {DEBUG,INFO,WARNING,ERROR,CRITICAL}] [-a ADDR] [-v]
+python3 tfc_rum_count.py [-h] [-l {DEBUG,INFO,WARNING,ERROR,CRITICAL}] [-a ADDR] [-v] [-p PATH] [-f FILE] [--csv CSV]
 
 Script to output basic Workspace Info (workspace ID, name, version, # resources) as well as an accurate RUM count.
 
@@ -16,7 +16,10 @@ options:
                         Set the logging level (default: ERROR)
   -a ADDR, --addr ADDR  URL for your TFE Server (default: 'https://app.terraform.io')
   -v, --verbose         Verbose will print details for every organization, otherwise only a summary table will appear.
-  ```
+  -p PATH, --path PATH  Path where state files are stored.
+  -f FILE, --file FILE  Output file for results   (*** COMING SOON ***)
+  --csv CSV             Output in CSV format      (*** COMING SOON ***)
+```
 ### Requires Requests Module
 ```$ python -m pip install requests```
 
@@ -48,6 +51,8 @@ https://developer.hashicorp.com/terraform/cloud-docs/api-docs/workspaces#get-tag
 _TF_ORG_: Organization Name
 
 ## Sample Output
+
+### TFC / TFE
 ```
 rryjewski@RKR-MBP14 tfc-rum-basic % python3 tfc_rum_count.py                   
 Header
@@ -153,4 +158,18 @@ Org Subtotal:
 
 Grand Total:
                                                                                                         1213       336         8      1557
+```
+
+### Sample for OSS:
+```
+ID                  Name                                    Version   Last Updated Resource Count        RUM   Data RS   Null RS     Total
+
+Org ID: /Users/rryjewski/sandbox/github/brightblueray/tfc-rum-basic/samples
+n/a                 terraform (1).tfstate                   1.0.9     2023-06-22   0                      25         0         0        25
+n/a                 terraform.tfstate                       0.12.17   2023-06-22   0                      42         0         0        42
+Org Subtotal:
+                                                                                                          67         0         0        67
+
+Grand Total:
+                                                                                                          67         0         0        67
 ```
