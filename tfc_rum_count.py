@@ -65,7 +65,7 @@ def tfapi_get_state (url, headers, params):
     return resources
 
 
-def get_resources(ws):
+def get_resources(ws, base_url, api_ver, headers, params):
     rum = 0
     null_rs = 0
     data_rs = 0
@@ -113,6 +113,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser(
         description="Script to output basic Workspace Info (workspace ID, name, version, # resources) as well as an accurate RUM count."
     )
+    # group = parser.add_mutually_exclusive_group()
     parser.add_argument(
         "-l",
         "--log-level",
@@ -127,21 +128,43 @@ def parse_arguments():
         help="URL for your TFE Server (default: 'https://app.terraform.io')",
     )
     parser.add_argument(
-        '-v', 
+        '-v',
         '--verbose',
         help="Verbose will print details for every organization, otherwise only a summary table will appear.",
-        action='store_true')
-
+        action='store_true'
+    )
+    parser.add_argument(
+        '-p',
+        '--path',
+        help="Path where state files are stored.",
+        required=False
+    )
+    parser.add_argument(
+        '-f',
+        '--file',
+        help="Output file for results"
+    )
+    parser.add_argument(
+        '--csv',
+        help="Output in CSV format"
+    )
     return parser.parse_args()
 
+# def process_path(path):
+#     folder_path = path
+#     json
 
+# # Iterate over the files in the folder
+# for filename in os.listdir(folder_path):
+#     if filename.endswith(".json"):
+#         file_path = os.path.join(folder_path, filename)
+#         with open(file_path) as file:
+#             json_data = json.load(file)
 
-# def print_summary(rum_sum):
-#     print ("Header")
-#     for org in rum_sum:
-#         for ws in org['workspaces']:
-#             print (f"{org['id']:<26}{ws['id']:<20}{ws['name']:<40}{ws['terraform-version']:<10}{datetime.datetime.strptime(ws['last-updated'], '%Y-%m-%dT%H:%M:%S.%fZ').strftime('%Y-%m-%d'):13} \
-#               {ws['resource-count']:<10}{ws['resources']['rum']:<10}{ws['resources']['data_rs']:<10}{ws['resources']['null_rs']:<10}{ws['resources']['total']:<10}")
+#         # Process the JSON data
+#         # ... Your processing code here ...
+#         print(f"Processed file: {filename}")
+
 
 
 def print_summary(rum_sum):
@@ -191,6 +214,73 @@ def print_summary(rum_sum):
     print(f"\nGrand Total:")
     print(row_format.format('', '', '', '', '', grand_total['rum'], grand_total['data_rs'], grand_total['null_rs'], grand_total['total']))
 
+def process_oss(args):
+    logging.info(f"Processing OSS")
+
+def process_enterprise(args):
+    logging.info(f"Processing Enterprise")
+    rum_sum = []  # rum_sum a list of organization results
+
+    # set the base url
+    base_url = os.environ.get("TF_ADDR") or f"{args.addr}"  #ENV Variable overrides commandline
+    logging.info(f"Using Base URL: {base_url}")
+    server = urlparse(base_url).netloc  # Need the server to parse the token from helper file
+    org_response = None
+
+    # Set API Token
+    token = os.environ.get("TF_TOKEN")     #ENV Variable first
+    if token is None:
+        try: 
+            with open(os.path.expanduser("~/.terraform.d/credentials.tfrc.json")) as fp:
+                credentials = json.load(fp)['credentials']
+                if server in credentials:
+                    token = credentials[server]['token']
+                else:
+                    default_server = "app.terraform.io"  # Default server value
+                    token = credentials.get(default_server, {}).get('token')
+                logging.info(f"Using Token from ~/.terraform.d/credentials.tfrc.json")
+        except FileNotFoundError:
+            token = getpass.getpass("Enter a TFC Token: ")
+            logging.info(f"Using Token from user prompt")
+    else:
+        logging.info(f"Using Token from $TF_TOKEN")
+
+    # Set Headers & Params
+    headers = {"Authorization": "Bearer " + token}
+    params = {'page[size]': '100'}
+    api_ver = "/api/v2"
+
+    orgs_url = f"{base_url}{api_ver}/organizations"
+    org_response = tfapi_get_data(orgs_url, headers, params)
+
+
+    # Iterate over each org
+    for o in org_response:
+        logging.info(f"Processing Org: {o['id']}")
+        org_sum = {}  # Initialize org summary
+        org_sum['id'] = o['id'] # Set the id to org_id being processed
+        org_sum['workspaces'] = [] # Initialize the list of workspaces for the org
+
+        ws_url = f"{base_url}{api_ver}/organizations/{o['id']}/workspaces" # build the url for ws list
+        workspaces = tfapi_get_data(ws_url, headers, params) # Get all the workspaces for the org
+        
+        for ws in workspaces:
+            logging.info(f"Processing ws: {ws['id']}")
+            ws_sum = {}
+            ws_sum['id'] = ws['id']
+            ws_sum['name'] = ws['attributes']['name']
+            ws_sum['resource-count'] = ws['attributes']['resource-count']
+            ws_sum['terraform-version'] = ws['attributes']['terraform-version']
+            ws_sum['last-updated'] = ws['attributes']['latest-change-at']
+            rs_sum = {'rum':0 , 'null_rs':0, 'data_rs':0, 'total': 0}
+            if ws_sum['resource-count'] > 0:
+                rs_sum = get_resources(ws, base_url, api_ver, headers, params)   
+            ws_sum['resources'] = rs_sum
+                
+            org_sum['workspaces'].append(ws_sum)
+            
+        rum_sum.append(org_sum)
+    print_summary(rum_sum)
 
 
 ##########################################
@@ -202,63 +292,9 @@ args = parse_arguments()
 verbose = args.verbose
 setup_logging(args.log_level)
 
-# set the base url
-base_url = os.environ.get("TF_ADDR") or f"{args.addr}"  #ENV Variable overrides commandline
-logging.info(f"Using Base URL: {base_url}")
-server = urlparse(base_url).netloc  # Need the server to parse the token from helper file
-
-# Set API Token
-token = os.environ.get("TF_TOKEN")     #ENV Variable first
-if token is None:
-    try: 
-        with open(os.path.expanduser("~/.terraform.d/credentials.tfrc.json")) as fp:
-            credentials = json.load(fp)['credentials']
-            if server in credentials:
-                token = credentials[server]['token']
-            else:
-                default_server = "app.terraform.io"  # Default server value
-                token = credentials.get(default_server, {}).get('token')
-            logging.info(f"Using Token from ~/.terraform.d/credentials.tfrc.json")
-    except FileNotFoundError:
-        token = getpass.getpass("Enter a TFC Token: ")
-        logging.info(f"Using Token from user prompt")
+path = args.path
+if path != None:
+    process_oss(args)
 else:
-    logging.info(f"Using Token from $TF_TOKEN")
+    process_enterprise(args)
 
-# Set Headers & Params
-headers = {"Authorization": "Bearer " + token}
-params = {'page[size]': '100'}
-api_ver = "/api/v2"
-
-# from packaging import version
-# old_ver = version.parse("0.12")
-orgs_url = f"{base_url}{api_ver}/organizations"
-org_response = tfapi_get_data(orgs_url, headers, params)
-rum_sum = []  # rum_sum a list of organization results
-
-# Iterate over each org
-for o in org_response:
-    logging.info(f"Processing Org: {o['id']}")
-    org_sum = {}  # Initialize org summary
-    org_sum['id'] = o['id'] # Set the id to org_id being processed
-    org_sum['workspaces'] = [] # Initialize the list of workspaces for the org
-    ws_url = f"{base_url}{api_ver}/organizations/{o['id']}/workspaces" # build the url for ws list
-    workspaces = tfapi_get_data(ws_url, headers, params) # Get all the workspaces for the org
-    
-    for ws in workspaces:
-        logging.info(f"Processing ws: {ws['id']}")
-        ws_sum = {}
-        ws_sum['id'] = ws['id']
-        ws_sum['name'] = ws['attributes']['name']
-        ws_sum['resource-count'] = ws['attributes']['resource-count']
-        ws_sum['terraform-version'] = ws['attributes']['terraform-version']
-        ws_sum['last-updated'] = ws['attributes']['latest-change-at']
-        rs_sum = {'rum':0 , 'null_rs':0, 'data_rs':0, 'total': 0}
-        if ws_sum['resource-count'] > 0:
-            rs_sum = get_resources(ws)
-        ws_sum['resources'] = rs_sum
-            
-        org_sum['workspaces'].append(ws_sum)
-        
-    rum_sum.append(org_sum)
-print_summary(rum_sum)

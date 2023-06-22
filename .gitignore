@@ -166,3 +166,6 @@ temp.sh
 .terraform/providers/registry.terraform.io/hashicorp/null/3.2.1/darwin_arm64/terraform-provider-null_v3.2.1_x5
 .terraform.lock.hcl
 rum-test.tf
+samples/*
+tfc_rum_count_nthread.py
+.vscode/launch.json
