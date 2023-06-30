@@ -23,11 +23,11 @@ def tfapi_get (url,headers,params=None):
             return response.json()
         except requests.exceptions.HTTPError as err:
             if response.status_code == 401:
-                logging.error("Authorization Error: 401 Unauthorized: {response.url}")
-                break 
+                logging.warning(f"Authorization Error: 401 Unauthorized: {response.url}")
+                return None 
             elif response.status_code == 404:
                 logging.error(f"Forbidden Error: 404 Not Found: {response.url}")
-                break #Fatal
+                break
             elif response.status_code == 429:
                 # print("Rate Limit Error: 429 Too Many Requests, throttling requests")
                 logging.warning("Rate Limit Error: 429 Too Many Requests, throttling requests")
@@ -48,6 +48,8 @@ def tfapi_get (url,headers,params=None):
 ##
 def tfapi_get_data (url, headers, params):
     result = tfapi_get(url, headers, params)
+    if result is None:
+        return None
     data = []
     data += result['data']
     while (result['links']['next']):
@@ -174,6 +176,11 @@ def print_summary(rum_sum):
     for org in rum_sum:
         print(f"\nOrg ID: {org['id']}")
         for ws in org['workspaces']:
+             # Truncate the name if it exceeds 40 characters
+            name = ws['name']
+            if len(name) > 39:
+                name = name[:36] + "..."
+
             # Define the row values with right-justification
             row_values = [
                 ws['id'], ws['name'], ws['terraform-version'],
@@ -316,6 +323,9 @@ def process_enterprise(args):
         ws_url = f"{base_url}{api_ver}/organizations/{o['id']}/workspaces" # build the url for ws list
         workspaces = tfapi_get_data(ws_url, headers, params) # Get all the workspaces for the org
 
+        if workspaces is None:
+            continue
+
         # # Single Threaded
         # for ws in workspaces:
         #     ws_sum = process_workspace(ws, base_url, api_ver, headers, params)    
@@ -334,8 +344,6 @@ def process_enterprise(args):
         rum_sum.append(org_sum)
         elapsed_time = time.perf_counter() - start_time
         print(f"Processed Org: {o['id']} in {elapsed_time:.3f} seconds")
-
-
     return rum_sum
 
 
