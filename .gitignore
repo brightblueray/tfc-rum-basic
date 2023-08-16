@@ -169,3 +169,4 @@ rum-test.tf
 samples/*
 tfc_rum_count_nthread.py
 .vscode/launch.json
+.DS_Store

@@ -230,14 +230,15 @@ def process_oss(args):
     workspaces = []  
 
     # Convert each state file into a json object
-    for filename in os.listdir(path):
-        print(f"Processing file: {path}/{filename}")
-        if filename.endswith('.tfstate'):
-            file_path = os.path.join(path, filename)
-            with open(file_path) as file:
-                json_data = json.load(file)
-                json_data['id'] = filename
-                workspaces.append(json_data)
+    for root, dirs, files in os.walk(path):
+        for filename in files:
+            if filename.endswith('.tfstate'):
+                file_path = os.path.join(root,filename)
+                print (f"Processing file: {file_path}")
+                with open(file_path) as file:
+                    json_data = json.load(file)
+                    json_data['id'] = filename
+                    workspaces.append(json_data)
 
     # Iterate over each org
     for o in org_response:
